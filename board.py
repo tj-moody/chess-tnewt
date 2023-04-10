@@ -2,13 +2,18 @@ startingFen = list('rnbqkbnrpppppppp................................PPPPPPPPRNBQ
 startingCastlingRights = list('KQkq')
 
 knight_offsets = [-17, -15, -10, -6, 6, 10, 15, 17]
-king_offsets = [-9, -8, -7, -1, -1, 7, 8, 9]
 
 class Move:
     def __init__(self, starting_position: int, ending_position: int) -> None:
         # both positions are 0-63 inclusive
         self.starting_position = starting_position
         self.ending_position = ending_position
+
+    def get_x_y_offset(self) -> dict[str, int]:
+        return {
+            'x':(self.ending_position % 8) - (self.starting_position % 8),
+            'y':(self.ending_position // 8 % 8) - (self.starting_position // 8 % 8 )
+        }
 
 class Square:  # A square in traditional chess notation, e.g. `d4`
     def __init__(self, square: str) -> None:
@@ -30,7 +35,8 @@ class Square:  # A square in traditional chess notation, e.g. `d4`
         return 63 - (int(self.rank) * 8 ) + char_to_num[self.file]
 
 class Board:
-    move = Move(0, 0)
+    current_move = Move(0, 0)
+    last_move = Move(0, 0)
     def __init__(self, fen: list[str], castling_rights: list[str], turn: int) -> None:
         self.fen = fen
         self.castling_rights = castling_rights
@@ -76,8 +82,6 @@ class Board:
             'P':0,
             '.':0,
         }
-        for i in range(len(self.fen)):
-            taken_pieces_tally[self.fen[i]] -= 1
         taken_pieces_tally['k'] += 1
         taken_pieces_tally['q'] += 1
         taken_pieces_tally['b'] += 2
@@ -90,6 +94,8 @@ class Board:
         taken_pieces_tally['N'] += 2
         taken_pieces_tally['R'] += 2
         taken_pieces_tally['P'] += 8
+        for i in range(len(self.fen)):
+            taken_pieces_tally[self.fen[i]] -= 1
         taken_pieces_string = ''
         pieceTypes = ['k','q','b','n','r','p',]
         for piece_type in pieceTypes:
@@ -142,15 +148,20 @@ class Board:
         if not is_valid_notation(ending_position):
             panic_and_loop()
 
-        self.move = Move(Square(starting_position).to_coordinate(), Square(ending_position).to_coordinate())
+        self.current_move = Move(Square(starting_position).to_coordinate(), Square(ending_position).to_coordinate())
 
-    def move_piece(self):
-        self.fen[self.move.ending_position] = self.fen[self.move.starting_position]
+    def move_piece(self):  # affects only fen last move
+        self.last_move = self.current_move
+        self.fen[self.current_move.ending_position] = self.fen[self.current_move.starting_position]
+        self.fen[self.current_move.starting_position] = '.'
+
 
     def check_legality(self) -> bool:
-        moving_piece = self.fen[self.move.starting_position]
-        target_piece = self.fen[self.move.ending_position]
-        offset = self.move.ending_position - self.move.starting_position
+        moving_piece = self.fen[self.current_move.starting_position]
+        target_piece = self.fen[self.current_move.ending_position]
+        offset = self.current_move.ending_position - self.current_move.starting_position
+        x_y_offset = self.current_move.get_x_y_offset()
+        match_str = "test"
 
         def piece_matches_turn(piece, turn):
             return (piece.isupper() and turn == 1) or (piece.islower() and turn == -1)
@@ -159,19 +170,22 @@ class Board:
             return False
         if moving_piece.isupper() == target_piece.isupper():
             return False
-        match moving_piece.lower():
+
+        match match_str.lower():
             case 'k':
-                return True
+                return False
             case 'q':
-                return True
+                return False
             case 'b':
-                return True
+                return False
             case 'n':
-                if not offset in knight_offsets:
+                if not [abs(x_y_offset['x']), abs(x_y_offset['y'])] in [[1, 2], [2, 1]]:
                     return False
             case 'r':
-                return True
+                return False
             case 'p':
-                return True
+                return False
+            case _:
+                return False
 
         return True
