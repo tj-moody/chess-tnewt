@@ -1,4 +1,4 @@
-from board import Board, startingFen, startingCastlingRights
+from board import Board, startingCastlingRights, startingFen
 
 # current_fen = ''
 #  0  1  2  3  4  5  6  7
@@ -9,10 +9,11 @@ from board import Board, startingFen, startingCastlingRights
 # 40 41 42 43 44 45 46 47
 # 48 49 50 51 52 53 54 55
 # 56 57 58 59 60 61 62 63
-startingFen = 'rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR'
-startingCastlingRights = 'KQkq'
+startingFen = list("rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR")
+startingCastlingRights = list("KQkq")
 
 board = Board(startingFen, startingCastlingRights, 1)
-board.print()
-board.get_player_move()
-board.print()
+play_again = True
+while play_again:
+    board.print()
+    board.get_player_move()
