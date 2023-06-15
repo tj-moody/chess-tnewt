@@ -1,6 +1,16 @@
-from offsets import *
+from offsets import (
+    get_ending_pos,
+    offset_is_in_board,
+    knight_offsets,
+    king_offsets,
+    bishop_offsets,
+    rook_offsets,
+    pawn_offsets,
+)
+from conversions import NotationSquare, board_x, board_y, pos_to_notation_square
+from textwrap import wrap
 
-startingFen = list("rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR")
+startingBoard = list("rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR")
 startingCastlingRights = list("KQkq")
 
 
@@ -21,57 +31,27 @@ def of_same_color(piece1: str, piece2: str) -> bool:
     return (piece1.isupper() == piece2.isupper()) and (piece1 != ".") and (piece2 != ".")
 
 
-def board_y(index: int) -> int:
-    return index // 8 % 8
-
-
-def board_x(index: int) -> int:
-    return index % 8
-
-
-class NotationSquare:  # A square in traditional chess notation, e.g. `d4`
-    def __init__(self, square: str) -> None:
-        self.square = square
-        self.file = square[0]
-        self.rank = square[1]
-
-    def to_coordinate(self) -> int:
-        char_to_num = {
-            "a": 1,
-            "b": 2,
-            "c": 3,
-            "d": 4,
-            "e": 5,
-            "f": 6,
-            "g": 7,
-            "h": 8,
-        }
-        return 63 - (int(self.rank) * 8) + char_to_num[self.file]
-
-    def is_valid_notation(self) -> bool:
-        return self.file in ["a", "b", "c", "d", "e", "f", "g", "h"] and self.rank in [
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-        ]
-
-
 class Board:
-    def __init__(self, fen: list[str], castling_rights: list[str], turn: int, pawn_double_rank: int = 8) -> None:
-        self.fen = fen
+    def __init__(
+        self,
+        board: list[str] = startingBoard,
+        turn: str = 'w',
+        castling_rights: list[str] = startingCastlingRights,
+        en_passant_square: int = 64,  # possible target square for en passant,
+        tempi: int = 0,
+        moves: int = 0,
+    ) -> None:
+        self.board = board
         self.castling_rights = castling_rights
         self.turn = turn
-        self.pawn_double_rank = pawn_double_rank
+        self.en_passant_target_pos = en_passant_square
+        self.tempi = tempi
+        self.moves = moves
 
     def reset(self):
-        self.fen = startingFen
+        self.board = startingBoard
         self.castling_rights = startingCastlingRights
-        self.turn = 1  # 1 = white, -1 = black
+        self.turn = 'w'
 
     def calc_material_diff(self) -> int:
         white_material = 0
@@ -85,12 +65,15 @@ class Board:
             "p": 1,
             ".": 0,
         }
-        for i in range(len(self.fen)):
-            if self.fen[i].isupper():
-                white_material += pieceValuesDict[self.fen[i].lower()]
+        for i in range(len(self.board)):
+            if self.board[i].isupper():
+                white_material += pieceValuesDict[self.board[i].lower()]
             else:
-                black_material += pieceValuesDict[self.fen[i].lower()]
+                black_material += pieceValuesDict[self.board[i].lower()]
         return white_material - black_material
+
+    def change_turn(self):
+        self.turn = 'b' if self.turn == 'w' else 'w'
 
     def calc_taken_pieces_string(self) -> str:
         taken_pieces_tally = {
@@ -108,8 +91,8 @@ class Board:
             "P": 8,
             ".": 0,
         }
-        for i in range(len(self.fen)):
-            taken_pieces_tally[self.fen[i]] -= 1
+        for i in range(len(self.board)):
+            taken_pieces_tally[self.board[i]] -= 1
         taken_pieces_string = ""
         pieceTypes = [
             "k",
@@ -144,7 +127,7 @@ class Board:
         }
         for i in range(8):
             for j in range(8):
-                print(f" {pieceCharDict[self.fen[8*i + j]]}", end="")
+                print(f" {pieceCharDict[self.board[8*i + j]]}", end="")
             print("\n", end="")
         material_diff = self.calc_material_diff()
         if material_diff > 0:
@@ -154,14 +137,13 @@ class Board:
         print(self.calc_taken_pieces_string())
 
     def get_pseudo_legal_moves(self, starting_pos) -> list:
-        moving_piece = self.fen[starting_pos]
+        moving_piece = self.board[starting_pos]
         if moving_piece == ".":
             return []
 
-        def piece_matches_turn(piece, turn):
-            return (piece.isupper() and turn == 1) or (piece.islower() and turn == -1)
+        def piece_matches_turn(piece: str, turn: str):
+            return (piece.isupper() and turn == 'w') or (piece.islower() and turn == 'b')
 
-        # if current_fen[starting_position]:
         if not piece_matches_turn(moving_piece, self.turn):
             return []
 
@@ -169,21 +151,23 @@ class Board:
 
         match moving_piece.lower():
             case "k":
-                for offset in king_xy_offsets:
+                for offset in king_offsets:
                     if not offset_is_in_board(starting_pos, offset):
                         continue
-                    target_piece = self.fen[get_ending_pos(starting_pos, offset)]
+                    target_piece = self.board[get_ending_pos(starting_pos, offset)]
                     if of_same_color(moving_piece, target_piece):
                         continue
                     pseudo_legal_target_positions.append(get_ending_pos(starting_pos, offset))
 
+                # TODO: Castling
+
                 return pseudo_legal_target_positions
             case "q":
-                for branch in bishop_xy_offsets + rook_xy_offsets:
+                for branch in bishop_offsets + rook_offsets:
                     for offset in branch:
                         if not offset_is_in_board(starting_pos, offset):
                             break
-                        target_piece = self.fen[get_ending_pos(starting_pos, offset)]
+                        target_piece = self.board[get_ending_pos(starting_pos, offset)]
                         if of_same_color(moving_piece, target_piece):
                             break
                         pseudo_legal_target_positions.append(get_ending_pos(starting_pos, offset))
@@ -192,11 +176,11 @@ class Board:
 
                 return pseudo_legal_target_positions
             case "b":
-                for branch in bishop_xy_offsets:
+                for branch in bishop_offsets:
                     for offset in branch:
                         if not offset_is_in_board(starting_pos, offset):
                             break
-                        target_piece = self.fen[get_ending_pos(starting_pos, offset)]
+                        target_piece = self.board[get_ending_pos(starting_pos, offset)]
                         if of_same_color(moving_piece, target_piece):
                             break
                         pseudo_legal_target_positions.append(get_ending_pos(starting_pos, offset))
@@ -205,18 +189,20 @@ class Board:
 
                 return pseudo_legal_target_positions
             case "n":
-                for offset in knight_xy_offsets:
-                    target_piece = self.fen[get_ending_pos(starting_pos, offset)]
-                    if offset_is_in_board(starting_pos, offset) and not of_same_color(moving_piece, target_piece):
+                for offset in knight_offsets:
+                    if not offset_is_in_board(starting_pos, offset):
+                        continue
+                    target_piece = self.board[get_ending_pos(starting_pos, offset)]
+                    if not of_same_color(moving_piece, target_piece):
                         pseudo_legal_target_positions.append(get_ending_pos(starting_pos, offset))
 
                 return pseudo_legal_target_positions
             case "r":
-                for branch in rook_xy_offsets:
+                for branch in rook_offsets:
                     for offset in branch:
                         if not offset_is_in_board(starting_pos, offset):
                             break
-                        target_piece = self.fen[get_ending_pos(starting_pos, offset)]
+                        target_piece = self.board[get_ending_pos(starting_pos, offset)]
                         if of_same_color(moving_piece, target_piece):
                             break
                         pseudo_legal_target_positions.append(get_ending_pos(starting_pos, offset))
@@ -225,27 +211,35 @@ class Board:
 
                 return pseudo_legal_target_positions
             case "p":
-                offsets = get_pawn_offsets(moving_piece.isupper())
-                single_target_pos = get_ending_pos(starting_pos, offsets["single"])
-                if self.fen[single_target_pos] == ".":
+                offsets = pawn_offsets(self.turn)
+                single_offset = offsets["single"]
+                if not offset_is_in_board(starting_pos, single_offset):
+                    return []
+                single_target_pos = get_ending_pos(starting_pos, single_offset)
+                print(self.board[single_target_pos])
+                if self.board[single_target_pos] == ".":
                     pseudo_legal_target_positions.append(single_target_pos)
-                    double_target_pos = get_ending_pos(starting_pos, offsets["double"])
-                    if self.fen[double_target_pos] == ".":
-                        pseudo_legal_target_positions.append(double_target_pos)
+                    double_offset = offsets["double"]
+                    if not offset_is_in_board(starting_pos, double_offset):
+                        return []
+                    double_target_pos = get_ending_pos(starting_pos, double_offset)
+                    if (self.turn == 'w' and board_y(starting_pos) == 6) or (
+                        self.turn == 'b' and board_y(starting_pos) == 1
+                    ):
+                        if self.board[double_target_pos] == ".":
+                            pseudo_legal_target_positions.append(double_target_pos)
 
                 for offset in offsets["captures"]:
                     capture_target_pos = get_ending_pos(starting_pos, offset)
-                    target_piece = self.fen[capture_target_pos]
-                    if not of_same_color(target_piece, moving_piece) and target_piece != '.':
+                    target_piece = self.board[capture_target_pos]
+                    if not of_same_color(target_piece, moving_piece) and target_piece != ".":
                         pseudo_legal_target_positions.append(capture_target_pos)
 
                 for offset in offsets["enpassant"]:
-                    enpassant_target_pos = get_ending_pos(starting_pos, offset)
-                    if self.pawn_double_rank == board_x(enpassant_target_pos):
-                        if moving_piece.isupper() and board_y(starting_pos) == 3:
-                            pseudo_legal_target_positions.append(enpassant_target_pos)
-                        elif board_y(starting_pos) == 4:
-                            pseudo_legal_target_positions.append(enpassant_target_pos)
+                    en_passant_target_pos = get_ending_pos(starting_pos, offset)
+                    if self.en_passant_target_pos == en_passant_target_pos:
+                        pseudo_legal_target_positions.append(en_passant_target_pos)
+                # TODO: Promotion
 
                 return pseudo_legal_target_positions
             case _:
@@ -264,7 +258,8 @@ class Board:
             return self.get_player_move()
 
         current_move = Move(
-            NotationSquare(starting_position).to_coordinate(), NotationSquare(ending_position).to_coordinate()
+            NotationSquare(starting_position).to_pos(),
+            NotationSquare(ending_position).to_pos()
         )
         if current_move.ending_position in self.get_pseudo_legal_moves(current_move.starting_position):
             self.move_piece(current_move)
@@ -272,14 +267,50 @@ class Board:
             print("ILLEGAL MOVE")
             return self.get_player_move()
 
-    def move_piece(self, current_move):  # affects only fen last move
+    def to_fen(self):
+        board_lines = wrap(''.join(self.board))
+        fen_board = ""
+        for line in board_lines:
+            count = 0
+            for piece in list(line):
+                if piece != '.':
+                    fen_board += str(piece)
+                    if count != 0:
+                        fen_board += str(count)
+                    count = 0
+                else:
+                    count += 1
+
+        turn = self.turn
+        castling_rights = ''.join(self.castling_rights)
+        if self.en_passant_target_pos == 64:
+            en_passant_target_square = '-'
+        else:
+            en_passant_target_square = pos_to_notation_square(self.en_passant_target_pos)
+        tempi = str(self.tempi)
+        moves = str(self.moves)
+
+        return " ".join([fen_board, turn, castling_rights, en_passant_target_square, tempi, moves])
+
+    def move_piece(self, current_move: Move):
         # set last pawn double move to allow en passant
-        self.pawn_double_rank = 8
-        if self.fen[current_move.starting_position].lower() == 'p':
+        self.en_passant_target_pos = 8
+        if self.board[current_move.starting_position].lower() == "p":
+            self.tempi = 0
             offset = current_move.ending_position - current_move.starting_position
             if offset == -16 or offset == 16:
-                self.pawn_double_rank = board_x(current_move.ending_position)
+                if self.turn == 'w':
+                    self.en_passant_target_pos = current_move.ending_position - 8
+                else:
+                    self.en_passant_target_pos = current_move.ending_position + 8
+        elif self.board[current_move.ending_position] != '.':
+            self.tempi = 0
+        else:
+            self.tempi = 0
 
-        self.fen[current_move.ending_position] = self.fen[current_move.starting_position]
-        self.fen[current_move.starting_position] = "."
-        self.turn *= -1
+        if self.turn == 'b':
+            self.moves += 1
+
+        self.board[current_move.ending_position] = self.board[current_move.starting_position]
+        self.board[current_move.starting_position] = "."
+        self.change_turn()

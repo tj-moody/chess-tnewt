@@ -24,7 +24,7 @@ def offset_is_in_board(starting_pos: int, xy_offset: dict) -> bool:
     return not (x > 7 or x < 0 or y > 7 or x < 0)
 
 
-knight_xy_offsets = [
+knight_offsets = [
     {"x": 1, "y": 2},
     {"x": 2, "y": 1},
     {"x": 2, "y": -1},
@@ -34,7 +34,7 @@ knight_xy_offsets = [
     {"x": -2, "y": 1},
     {"x": -1, "y": 2},
 ]
-king_xy_offsets = [
+king_offsets = [
     {"x": 1, "y": 1},
     {"x": 1, "y": 0},
     {"x": 1, "y": -1},
@@ -44,7 +44,7 @@ king_xy_offsets = [
     {"x": -1, "y": 1},
     {"x": 0, "y": 1},
 ]
-bishop_xy_offsets = [
+bishop_offsets = [
     [
         {"x": 1, "y": 1},
         {"x": 2, "y": 2},
@@ -82,7 +82,7 @@ bishop_xy_offsets = [
         {"x": -7, "y": 7},
     ],
 ]
-rook_xy_offsets = [
+rook_offsets = [
     [
         {"x": 1, "y": 0},
         {"x": 2, "y": 0},
@@ -123,21 +123,8 @@ rook_xy_offsets = [
 
 
 # key is piece.isupper()
-def get_pawn_offsets(is_white):
-    if is_white:
-        return {
-            "single": {"x": 0, "y": 1},
-            "double": {"x": 0, "y": 2},
-            "captures": [
-                {"x": -1, "y": 1},
-                {"x": 1, "y": 1},
-            ],
-            "enpassant": [
-                {"x": -1, "y": 2},
-                {"x": 1, "y": 2},
-            ],
-        }
-    else:
+def pawn_offsets(turn: str):
+    if turn == 'w':
         return {
             "single": {"x": 0, "y": -1},
             "double": {"x": 0, "y": -2},
@@ -148,5 +135,18 @@ def get_pawn_offsets(is_white):
             "enpassant": [
                 {"x": -1, "y": -2},
                 {"x": 1, "y": -2},
+            ],
+        }
+    else:
+        return {
+            "single": {"x": 0, "y": 1},
+            "double": {"x": 0, "y": 2},
+            "captures": [
+                {"x": -1, "y": 1},
+                {"x": 1, "y": 1},
+            ],
+            "enpassant": [
+                {"x": -1, "y": 2},
+                {"x": 1, "y": 2},
             ],
         }
