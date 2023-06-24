@@ -34,16 +34,37 @@ knight_offsets = [
     {"x": -2, "y": 1},
     {"x": -1, "y": 2},
 ]
-king_offsets = [
-    {"x": 1, "y": 1},
-    {"x": 1, "y": 0},
-    {"x": 1, "y": -1},
-    {"x": 0, "y": -1},
-    {"x": -1, "y": -1},
-    {"x": -1, "y": 0},
-    {"x": -1, "y": 1},
-    {"x": 0, "y": 1},
-]
+king_offsets = {
+    "move": [
+        {"x": 1, "y": 1},
+        {"x": 1, "y": 0},
+        {"x": 1, "y": -1},
+        {"x": 0, "y": -1},
+        {"x": -1, "y": -1},
+        {"x": -1, "y": 0},
+        {"x": -1, "y": 1},
+        {"x": 0, "y": 1},
+    ],
+    "castle": {
+        'k': {
+            'between': [  # could hardcode positions
+                {"x": 1, "y": 0},
+            ],
+            'target': [
+                {"x": 2, "y": 0},
+            ],
+        },
+        'q': {
+            'between': [
+                {"x": -1, "y": 0},
+                {"x": -2, "y": 0},
+            ],
+            'target': [
+                {"x": -3, "y": 0},
+            ],
+        },
+    }
+}
 bishop_offsets = [
     [
         {"x": 1, "y": 1},
@@ -124,7 +145,7 @@ rook_offsets = [
 
 # key is piece.isupper()
 def pawn_offsets(turn: str):
-    if turn == 'w':
+    if turn == "w":
         return {
             "single": {"x": 0, "y": -1},
             "double": {"x": 0, "y": -2},
