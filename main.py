@@ -22,18 +22,16 @@ startingFen = list("rnbqkbnrpppppppp................................PPPPPPPPRNBQ
 startingCastlingRights = list("KQkq")
 
 board = Board()
-# moves = [
-#     Move(51, 35),
-#     Move(11, 27),
-#     Move(62, 45),
-#     Move(1, 18),
-# ]
-# board.print()
-# for move in moves:
-#     if move.ending_position in board.get_pseudo_legal_moves(move.starting_position):
-#         board.move_piece(move)
-#         board.print()
-
-print(board.to_fen())
-board, turn, castling_rights, en_passant_target_pos, tempi, moves = fen_to_board('rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2')
-Board(board, turn, castling_rights, en_passant_target_pos, tempi, moves).print()
+moves = [
+    Move(51, 35),
+    Move(11, 27),
+    Move(62, 45),
+    Move(1, 18),
+]
+board.print()
+for move in moves:
+    if move.ending_pos in board.threatmap(move.starting_pos):
+        board.move_piece(move)
+        board.print()
+    else:
+        print("ILLEGAL MOVE")

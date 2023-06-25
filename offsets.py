@@ -1,7 +1,7 @@
-def get_xy_ending_pos(starting_pos: int, xy_offset: dict) -> dict:
+def get_xy_end_pos(start_pos: int, xy_offset: dict[str, int]) -> dict:
     xy_pos = {
-        "x": starting_pos % 8,
-        "y": (starting_pos // 8) % 8,
+        "x": start_pos % 8,
+        "y": (start_pos // 8) % 8,
     }
     return {
         "x": xy_pos["x"] + xy_offset["x"],
@@ -9,15 +9,15 @@ def get_xy_ending_pos(starting_pos: int, xy_offset: dict) -> dict:
     }
 
 
-def get_ending_pos(starting_pos: int, xy_offset: dict) -> int:
-    xy_ending_pos = get_xy_ending_pos(starting_pos, xy_offset)
-    return xy_ending_pos["x"] + (8 * xy_ending_pos["y"])
+def get_end_pos(start_pos: int, xy_offset: dict[str, int]) -> int:
+    xy_end_pos = get_xy_end_pos(start_pos, xy_offset)
+    return xy_end_pos["x"] + (8 * xy_end_pos["y"])
 
 
-def offset_is_in_board(starting_pos: int, xy_offset: dict) -> bool:
+def offset_is_in_board(start_pos: int, xy_offset: dict[str, int]) -> bool:
     xy_pos = {
-        "x": starting_pos % 8,
-        "y": (starting_pos // 8) % 8,
+        "x": start_pos % 8,
+        "y": (start_pos // 8) % 8,
     }
     x = xy_pos["x"] + xy_offset["x"]
     y = xy_pos["y"] + xy_offset["y"]
@@ -144,7 +144,7 @@ rook_offsets = [
 
 
 # key is piece.isupper()
-def pawn_offsets(turn: str):
+def pawn_offsets(turn: str) -> dict:
     if turn == "w":
         return {
             "single": {"x": 0, "y": -1},
